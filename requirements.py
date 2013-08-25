@@ -1,0 +1,13 @@
+Flask==0.10.1
+Flask-RESTful==0.2.5
+Jinja2==2.7.1
+MarkupSafe==0.18
+Pattern==2.6
+Werkzeug==0.9.3
+argparse==1.2.1
+distribute==0.6.24
+ipdb==0.7
+ipython==1.0.0
+itsdangerous==0.23
+six==1.3.0
+wsgiref==0.1.2

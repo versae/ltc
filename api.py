@@ -38,7 +38,7 @@ class LondonTransitComission(restful.Resource):
 
     def get(self):
         return response({
-            'message': 'Welcome to the London Transit Comission API',
+            'message': 'Welcome to the London Transit Commission REST API',
             'status': 200,
             'resources': [
                 unicode(LondonTransitComission.resource()),

@@ -1,4 +1,5 @@
 import os
+from geopy.distance import distance
 
 from pattern.web import DOM
 from pattern.web import download
@@ -51,7 +52,7 @@ class RoutesList(restful.Resource):
 
     @classmethod
     def resource(cls):
-        return cls, '/routes'
+        return cls, '/routes', '/routes/'
 
     def get(self):
         url = URL("http://www.ltconline.ca/WebWatch/ada.aspx")
@@ -75,7 +76,7 @@ class Routes(restful.Resource):
 
     @classmethod
     def resource(cls):
-        return cls, '/routes/<string:route>'
+        return cls, '/routes/<string:route>', '/routes/<string:route>/'
 
     def get(self, route):
         parser = reqparse.RequestParser()
@@ -83,6 +84,10 @@ class Routes(restful.Resource):
                             help='Direction of the route')
         parser.add_argument('stop', type=int, required=False,
                             help='Stop number')
+        parser.add_argument('latitude', type=float, required=False,
+                            help='Latitude to sort results by')
+        parser.add_argument('longitude', type=float, required=False,
+                            help='Longitude to sort results by')
         args = parser.parse_args()
         url = "http://www.ltconline.ca/WebWatch/UpdateWebMap.aspx?u={}"
         try:
@@ -110,9 +115,11 @@ class Routes(restful.Resource):
                             "time": time,
                             "destination": destination.title(),
                         })
+                direction = direction.lower()
                 if ((not args["stop"] or args["stop"] == stop_number) and
                     (not args["direction"]
-                     or args["direction"].lower() == direction.lower())):
+                     or (direction.startswith(args["direction"].lower())
+                         or args["direction"].lower() == direction))):
                     stop = {
                         "latitude": float(latitude),
                         "longitude": float(longitude),
@@ -121,7 +128,16 @@ class Routes(restful.Resource):
                         "stop_number": stop_number,
                         "times": times,
                     }
+                    if args["latitude"] and args["longitude"]:
+                        stop_location = stop["latitude"], stop["longitude"]
+                        request_location = args["latitude"], args["longitude"]
+                        stop.update({
+                            "distance": distance(stop_location,
+                                                 request_location).m,
+                        })
                     stops.append(stop)
+        if stops and args["latitude"] and args["longitude"]:
+            stops.sort(key=lambda x: x["distance"])
         return response(stops)
 
 api.add_resource(*LondonTransitComission.resource())

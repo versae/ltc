@@ -1,4 +1,5 @@
 import os
+from functools import wraps
 from geopy.distance import distance
 
 from pattern.web import DOM
@@ -15,40 +16,85 @@ DEBUG = bool(os.environ.get("DEBUG", False))
 
 app = Flask(__name__)
 api = restful.Api(app)
+parser = reqparse.RequestParser()
+parser.add_argument('direction', type=str, required=False,
+                    help='Direction of the route (north, east, south, west)')
+parser.add_argument('stop', type=int, required=False,
+                    help='Stop number')
+parser.add_argument('latitude', type=float, required=False,
+                    help='Latitude to sort results by')
+parser.add_argument('longitude', type=float, required=False,
+                    help='Longitude to sort results by')
 
 
-def response(data, status=200, headers=None):
-    cors_headers = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "content-type, accept",
-        "Access-Control-Max-Age": 60,
-    }
-    if not headers:
-        headers = {}
-    headers.update(cors_headers)
-    return data, status, headers
+def cors(func, allow_origin=None, allow_headers=None, max_age=None):
+    if not allow_origin:
+        allow_origin = "*"
+    if not allow_headers:
+        allow_headers = "content-type, accept"
+    if not max_age:
+        max_age = 60
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        response = func(*args, **kwargs)
+        cors_headers = {
+            "Access-Control-Allow-Origin": allow_origin,
+            "Access-Control-Allow-Methods": func.__name__.upper(),
+            "Access-Control-Allow-Headers": allow_headers,
+            "Access-Control-Max-Age": max_age,
+        }
+        if isinstance(response, tuple):
+            if len(response) == 3:
+                headers = response[-1]
+            else:
+                headers = {}
+            headers.update(cors_headers)
+            return (response[0], response[1], headers)
+        else:
+            return response, 200, cors_headers
+    return wrapper
 
 
-class LondonTransitComission(restful.Resource):
+class Resource(restful.Resource):
+    method_decorators = [cors]
+
+
+class LondonTransitComission(Resource):
 
     @classmethod
     def resource(cls):
         return cls, '/'
 
     def get(self):
-        return response({
+        args_text = []
+        for arg in parser.args:
+            arg_text = {
+                "name": arg.name,
+                "type": arg.type.__name__,
+                "help": arg.help,
+                "required": arg.required,
+            }
+            args_text.append(arg_text)
+        return {
             'message': 'Welcome to the London Transit Comission API',
             'status': 200,
-            'resources': [
-                unicode(LondonTransitComission.resource()),
-                unicode(RoutesList.resource()),
-                unicode(Routes.resource()),
-            ],
-        })
+            'resources': [{
+                "resource": repr(LondonTransitComission),
+                "endpoints": LondonTransitComission.resource()[1:],
+            }, {
+                "resource": repr(RoutesList),
+                "endpoints": RoutesList.resource()[1:],
+                "params": args_text,
+            }, {
+                "resource": repr(Routes),
+                "endpoints": Routes.resource()[1:],
+                "params": args_text,
+            }],
+        }, 200
 
 
-class RoutesList(restful.Resource):
+class RoutesList(Resource):
 
     @classmethod
     def resource(cls):
@@ -59,44 +105,36 @@ class RoutesList(restful.Resource):
         try:
             dom = DOM(url.download(cached=True))
         except (HTTP404NotFound, URLTimeout):
-            return response({
+            return {
                 "message": "LTC WebWatch service looks down",
                 "status": 408,
-            }, 408)
+            }, 408
         routes = {}
         for a in dom("a.ada"):
             a_split = a.content.split(",")
             routes.update({
                 a_split[0].strip(): a.content.replace(", ", " - ").title(),
             })
-        return response(routes)
+        return routes
 
 
-class Routes(restful.Resource):
+class Routes(Resource):
 
     @classmethod
     def resource(cls):
         return cls, '/routes/<string:route>', '/routes/<string:route>/'
 
     def get(self, route):
-        parser = reqparse.RequestParser()
-        parser.add_argument('direction', type=str, required=False,
-                            help='Direction of the route')
-        parser.add_argument('stop', type=int, required=False,
-                            help='Stop number')
-        parser.add_argument('latitude', type=float, required=False,
-                            help='Latitude to sort results by')
-        parser.add_argument('longitude', type=float, required=False,
-                            help='Longitude to sort results by')
         args = parser.parse_args()
         url = "http://www.ltconline.ca/WebWatch/UpdateWebMap.aspx?u={}"
         try:
-            html = download(url.format(route), timeout=10, cached=False)
-        except (HTTP404NotFound, URLTimeout):
-            return response({
-                "message": "LTC WebWatch service looks down",
+            html = download(url.format(route), timeout=60, cached=False)
+        except (HTTP404NotFound, URLTimeout) as ex:
+            msg = "LTC WebWatch service looks down ({})"
+            return {
+                "message": msg.format(repr(ex)),
                 "status": 408,
-            }, 408)
+            }, 408
         timestamp, main_stops, info_text, minor_stops = html.split("*")
         stops_lines = (main_stops + minor_stops).split(";")
         stops = []
@@ -132,13 +170,13 @@ class Routes(restful.Resource):
                         stop_location = stop["latitude"], stop["longitude"]
                         request_location = args["latitude"], args["longitude"]
                         stop.update({
-                            "distance": distance(stop_location,
-                                                 request_location).m,
+                            "distance_in_meters": distance(stop_location,
+                                                           request_location).m,
                         })
                     stops.append(stop)
         if stops and args["latitude"] and args["longitude"]:
-            stops.sort(key=lambda x: x["distance"])
-        return response(stops)
+            stops.sort(key=lambda x: x["distance_in_meters"])
+        return stops
 
 api.add_resource(*LondonTransitComission.resource())
 api.add_resource(*RoutesList.resource())

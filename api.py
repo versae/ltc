@@ -169,13 +169,17 @@ class Routes(Resource):
                     if args["latitude"] and args["longitude"]:
                         stop_location = stop["latitude"], stop["longitude"]
                         request_location = args["latitude"], args["longitude"]
+                        distance_obj = distance(stop_location,
+                                                request_location)
                         stop.update({
-                            "distance_in_meters": distance(stop_location,
-                                                           request_location).m,
+                            "distance": {
+                                "meters": distance_obj.m,
+                                "miles": distance_obj.miles,
+                            }
                         })
                     stops.append(stop)
         if stops and args["latitude"] and args["longitude"]:
-            stops.sort(key=lambda x: x["distance_in_meters"])
+            stops.sort(key=lambda x: x["distance"]["meters"])
         return stops
 
 api.add_resource(*LondonTransitComission.resource())

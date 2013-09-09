@@ -125,6 +125,15 @@ class Routes(Resource):
         return cls, '/routes/<string:route>', '/routes/<string:route>/'
 
     def get(self, route):
+        parser = reqparse.RequestParser()
+        parser.add_argument('direction', type=str, required=False,
+                            help='Direction of the route')
+        parser.add_argument('stop', type=int, required=False,
+                            help='Stop number')
+        parser.add_argument('latitude', type=float, required=False,
+                            help='Latitude to sort results by')
+        parser.add_argument('longitude', type=float, required=False,
+                            help='Longitude to sort results by')
         args = parser.parse_args()
         url = "http://www.ltconline.ca/WebWatch/UpdateWebMap.aspx?u={}"
         try:

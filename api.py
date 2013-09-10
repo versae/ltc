@@ -158,9 +158,15 @@ class Routes(Resource):
                     time_text_splits = time_text.split(" TO ")
                     if len(time_text_splits) == 2:
                         time, destination = time_text_splits
+                        destination = destination.strip()
+                        route_time = unicode(route)
+                        if destination.startswith(route_time):
+                            destination_split = destination.split(" ", 1)
+                            route_time, destination = destination_split
                         times.append({
                             "time": time,
                             "destination": destination.title(),
+                            "route": route_time,
                         })
                 direction = direction.lower()
                 if ((not args["stop"] or args["stop"] == stop_number) and

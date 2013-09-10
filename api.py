@@ -178,7 +178,7 @@ class Routes(Resource):
                         "longitude": float(longitude),
                         "name": name.title(),
                         "direction": direction.title(),
-                        "stop_number": stop_number,
+                        "number": stop_number,
                         "times": times,
                     }
                     if args["latitude"] and args["longitude"]:

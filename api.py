@@ -78,6 +78,7 @@ class LondonTransitComission(Resource):
             args_text.append(arg_text)
         return {
             'message': 'Welcome to the London Transit Comission API',
+            'source': 'https://github.com/versae/ltc',
             'status': 200,
             'resources': [{
                 "resource": repr(LondonTransitComission),

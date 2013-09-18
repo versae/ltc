@@ -60,7 +60,7 @@ class Resource(restful.Resource):
     method_decorators = [cors]
 
 
-class LondonTransitComission(Resource):
+class LondonTransitCommission(Resource):
 
     @classmethod
     def resource(cls):
@@ -77,11 +77,12 @@ class LondonTransitComission(Resource):
             }
             args_text.append(arg_text)
         return {
-            'message': 'Welcome to the London Transit Comission API',
+            'message': 'Welcome to the London Transit Commission API',
+            'source': 'https://github.com/versae/ltc',
             'status': 200,
             'resources': [{
-                "resource": repr(LondonTransitComission),
-                "endpoints": LondonTransitComission.resource()[1:],
+                "resource": repr(LondonTransitCommission),
+                "endpoints": LondonTransitCommission.resource()[1:],
             }, {
                 "resource": repr(RoutesList),
                 "endpoints": RoutesList.resource()[1:],
@@ -198,7 +199,7 @@ class Routes(Resource):
             stops.sort(key=lambda x: x["distance"]["meters"])
         return stops
 
-api.add_resource(*LondonTransitComission.resource())
+api.add_resource(*LondonTransitCommission.resource())
 api.add_resource(*RoutesList.resource())
 api.add_resource(*Routes.resource())
 

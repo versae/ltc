@@ -180,6 +180,7 @@ class Routes(Resource):
                         "direction": direction.title(),
                         "number": stop_number,
                         "times": times,
+                        "route": route,
                     }
                     if args["latitude"] and args["longitude"]:
                         stop_location = stop["latitude"], stop["longitude"]

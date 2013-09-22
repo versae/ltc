@@ -105,11 +105,17 @@ class RoutesList(Resource):
                 "message": "LTC WebWatch service looks down",
                 "status": 408,
             }, 408
-        routes = {}
+        routes = []
         for a in dom("a.ada"):
             a_split = a.content.split(",")
-            routes.update({
-                a_split[0].strip(): a.content.replace(", ", " - ").title(),
+            route = a_split[0].strip()
+            try:
+                route = int(route)
+            except ValueError:
+                pass
+            routes.append({
+                "route": route,
+                "name": a.content.split(", ", 1)[1].strip().title(),
             })
         return routes
 

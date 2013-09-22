@@ -11,6 +11,7 @@ from pattern.web import URLTimeout
 from flask import Flask
 from flask.ext import restful
 from flask.ext.restful import reqparse
+from flask.ext.restful.utils import unpack
 
 DEBUG = bool(os.environ.get("DEBUG", False))
 
@@ -44,15 +45,9 @@ def cors(func, allow_origin=None, allow_headers=None, max_age=None):
             "Access-Control-Allow-Headers": allow_headers,
             "Access-Control-Max-Age": max_age,
         }
-        if isinstance(response, tuple):
-            if len(response) == 3:
-                headers = response[-1]
-            else:
-                headers = {}
-            headers.update(cors_headers)
-            return (response[0], response[1], headers)
-        else:
-            return response, 200, cors_headers
+        data, code, headers = unpack(response)
+        headers.update(cors_headers)
+        return data, code, headers
     return wrapper
 
 
